@@ -1,0 +1,67 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - stable/**
+
+jobs:
+  bandit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v6
+      - run: uvx --with tox-uv tox -e bandit-baseline
+
+  eslint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - run: mkdir -p .tox/npm
+      - run: pnpm install
+      - uses: reviewdog/action-eslint@v1.34.0
+        with:
+          eslint_flags: openstack_dashboard/static horizon/static openstack_dashboard/dashboards/*/static
+
+  karma:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ["horizon", "openstack_dashboard"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - run: mkdir -p .tox/npm
+      - run: pnpm install
+      - run: pnpm exec karma start ${{ matrix.package }}/karma.conf.js --single-run
+
+  pep8:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+      - run: uvx --with tox-uv tox -e pep8
+
+  py3:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+      - run: uvx --with tox-uv tox -e py3
+
+  selenium-headless:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+      - run: uvx --with tox-uv tox -e selenium-headless
